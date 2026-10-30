@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pillar | Gestionale Edile</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="logo">P</div>
+          <div>
+            <h1>Pillar</h1>
+            <span>Gestionale</span>
+          </div>
+        </div>
+
+        <nav class="nav">
+          <a class="active" href="#">Dashboard</a>
+          <a href="#">Cantieri</a>
+          <a href="#">Preventivi</a>
+          <a href="#">Materiali</a>
+          <a href="#">Fatture</a>
+          <a href="#">Dipendenti</a>
+          <a href="#">Report</a>
+        </nav>
+
+        <div class="sidebar-card">
+          <p>Andamento mese</p>
+          <strong>+18.4%</strong>
+          <span>Rispetto al mese scorso</span>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Panoramica</p>
+            <h2>Dashboard operativa</h2>
+          </div>
+          <div class="topbar-actions">
+            <button class="ghost-btn">Filtra</button>
+            <button class="primary-btn">Nuovo cantiere</button>
+          </div>
+        </header>
+
+        <section class="stats-grid" id="statsGrid"></section>
+
+        <section class="content-grid">
+          <div class="panel panel-large">
+            <div class="panel-header">
+              <h3>Progetti in corso</h3>
+              <button class="text-btn">Vedi tutti</button>
+            </div>
+            <div class="projects-list" id="projectsList"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <h3>Attività urgente</h3>
+              <span class="chip warning">3</span>
+            </div>
+            <ul class="task-list" id="urgentTasks"></ul>
+          </div>
+        </section>
+
+        <section class="content-grid lower-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <h3>Materiali in magazzino</h3>
+              <button class="text-btn">Aggiorna</button>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Articolo</th>
+                  <th>Qtà</th>
+                  <th>Stato</th>
+                </tr>
+              </thead>
+              <tbody id="stockTable"></tbody>
+            </table>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <h3>Fatture da incassare</h3>
+              <button class="text-btn">Esporta</button>
+            </div>
+            <div class="invoice-list" id="invoicesList"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
