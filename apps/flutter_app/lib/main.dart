@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const PillarApp());
@@ -15,10 +15,10 @@ class PillarApp extends StatefulWidget {
 }
 
 class _PillarAppState extends State<PillarApp> {
-  bool _isLoggedIn = false;
+  bool _loggedIn = false;
   String _role = 'slave';
-  String _token = '';
   String _email = '';
+  String _token = '';
 
   @override
   void initState() {
@@ -32,12 +32,12 @@ class _PillarAppState extends State<PillarApp> {
     final role = prefs.getString('pillar_role');
     final email = prefs.getString('pillar_email');
 
-    if (token != null && token.isNotEmpty && role != null) {
+    if (token != null && role != null && email != null) {
       setState(() {
-        _isLoggedIn = true;
-        _role = role;
+        _loggedIn = true;
         _token = token;
-        _email = email ?? '';
+        _role = role;
+        _email = email;
       });
     }
   }
@@ -53,9 +53,9 @@ class _PillarAppState extends State<PillarApp> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     setState(() {
-      _isLoggedIn = false;
-      _role = 'slave';
+      _loggedIn = false;
       _token = '';
+      _role = 'slave';
       _email = '';
     });
   }
@@ -72,16 +72,15 @@ class _PillarAppState extends State<PillarApp> {
         }),
       );
 
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        final body = jsonDecode(response.body) as Map<String, dynamic>;
-        final token = body['token'] ?? 'mock-token';
-
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final token = data['token'] as String? ?? 'mock-token';
         await _saveSession(token, role, email);
         setState(() {
-          _isLoggedIn = true;
+          _loggedIn = true;
           _role = role;
-          _token = token;
           _email = email;
+          _token = token;
         });
       } else {
         throw Exception('Login failed');
@@ -89,10 +88,10 @@ class _PillarAppState extends State<PillarApp> {
     } catch (_) {
       await _saveSession('mock-token-$role-$email', role, email);
       setState(() {
-        _isLoggedIn = true;
+        _loggedIn = true;
         _role = role;
-        _token = 'mock-token-$role-$email';
         _email = email;
+        _token = 'mock-token-$role-$email';
       });
     }
   }
@@ -106,7 +105,7 @@ class _PillarAppState extends State<PillarApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
         useMaterial3: true,
       ),
-      home: _isLoggedIn
+      home: _loggedIn
           ? DashboardScreen(
               role: _role,
               email: _email,
@@ -131,19 +130,14 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController(text: 'admin@pillar.it');
   final _passwordController = TextEditingController(text: 'pillar123');
-  String _selectedRole = 'master';
+  String _role = 'master';
   bool _loading = false;
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _loading = true);
     try {
-      await widget.onLogin(
-        _emailController.text.trim(),
-        _passwordController.text,
-        _selectedRole,
-      );
+      await widget.onLogin(_emailController.text.trim(), _passwordController.text, _role);
     } finally {
       setState(() => _loading = false);
     }
@@ -152,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FB),
+      backgroundColor: const Color(0xFFEEF5FF),
       body: Center(
         child: Card(
           margin: const EdgeInsets.all(24),
@@ -170,16 +164,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     Row(
                       children: const [
                         CircleAvatar(
-                          radius: 24,
+                          radius: 25,
                           backgroundColor: Color(0xFF1E88E5),
-                          child: Text('P', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800)),
+                          child: Text('P', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 28)),
                         ),
-                        SizedBox(width: 12),
+                        SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Pillar', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
+                              Text('Pillar', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800)),
                               Text('Sync Pro', style: TextStyle(color: Colors.grey)),
                             ],
                           ),
@@ -192,29 +186,23 @@ class _LoginScreenState extends State<LoginScreen> {
                         ButtonSegment(value: 'master', label: Text('Master')),
                         ButtonSegment(value: 'slave', label: Text('Slave')),
                       ],
-                      selected: {_selectedRole},
-                      onSelectionChanged: (value) {
-                        setState(() => _selectedRole = value.first);
+                      selected: {_role},
+                      onSelectionChanged: (selection) {
+                        setState(() => _role = selection.first);
                       },
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 22),
                     TextFormField(
                       controller: _emailController,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) => value == null || value.isEmpty ? 'Inserisci l\'email' : null,
+                      decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
+                      validator: (value) => (value == null || value.isEmpty) ? 'Inserisci email' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _passwordController,
                       obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Password',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) => value == null || value.isEmpty ? 'Inserisci la password' : null,
+                      decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder()),
+                      validator: (value) => (value == null || value.isEmpty) ? 'Inserisci password' : null,
                     ),
                     const SizedBox(height: 20),
                     FilledButton.icon(
@@ -224,9 +212,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 18),
                     Text(
-                      _selectedRole == 'master'
-                          ? 'Master: visione completa, approvazione e distribuzione dati.'
-                          : 'Slave: invio dati e ricezione solo di informazioni autorizzate.',
+                      _role == 'master'
+                          ? 'Master: vede tutto, approva e distribuisce le modifiche.'
+                          : 'Slave: invia dati e riceve solo ciò che è stato autorizzato.',
                       textAlign: TextAlign.center,
                       style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
@@ -260,23 +248,44 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  bool _isCheckingSync = false;
+  int _currentIndex = 0;
+  bool _checking = false;
   bool _sending = false;
   String _status = 'offline';
   String _message = 'Nessuna sincronizzazione eseguita';
-  List<Map<String, dynamic>> _queue = [
-    {'id': '1', 'entity': 'site', 'action': 'create', 'status': 'pending'},
-    {'id': '2', 'entity': 'document', 'action': 'upload', 'status': 'pending'},
+
+  final List<Map<String, dynamic>> _syncQueue = [
+    {'entity': 'site', 'action': 'create', 'status': 'pending'},
+    {'entity': 'document', 'action': 'upload', 'status': 'pending'},
+    {'entity': 'material', 'action': 'update', 'status': 'pending'},
+  ];
+
+  final List<Map<String, dynamic>> _sites = [
+    {'name': 'Residenza Vela', 'client': 'Vela Immobiliare', 'progress': 78, 'budget': 420000},
+    {'name': 'Centro commerciale Nord', 'client': 'Nord Retail', 'progress': 58, 'budget': 680000},
+    {'name': 'Palazzo San Marco', 'client': 'San Marco Group', 'progress': 66, 'budget': 540000},
+  ];
+
+  final List<Map<String, dynamic>> _materials = [
+    {'name': 'Cemento', 'qty': '120 sacchi', 'status': 'OK'},
+    {'name': 'Travertino', 'qty': '34 pannelli', 'status': 'Basso'},
+    {'name': 'Vernice esterna', 'qty': '18 bidoni', 'status': 'Basso'},
+  ];
+
+  final List<Map<String, dynamic>> _team = [
+    {'name': 'Giulia Rossi', 'role': 'Direzione lavori', 'shift': 'A'},
+    {'name': 'Marco Bianchi', 'role': 'Capo cantiere', 'shift': 'B'},
+    {'name': 'Stefania Neri', 'role': 'Ufficio tecnico', 'shift': 'A'},
   ];
 
   Future<void> _checkSync() async {
-    setState(() => _isCheckingSync = true);
+    setState(() => _checking = true);
     try {
       final response = await http.get(Uri.parse('http://127.0.0.1:3000/sync/devices'));
       if (response.statusCode >= 200 && response.statusCode < 300) {
         setState(() {
           _status = 'online';
-          _message = 'Sincronizzazione disponibile';
+          _message = 'Server raggiungibile';
         });
       }
     } catch (_) {
@@ -285,13 +294,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _message = 'Master non raggiungibile';
       });
     } finally {
-      setState(() => _isCheckingSync = false);
+      setState(() => _checking = false);
     }
   }
 
   Future<void> _sendSync() async {
     setState(() => _sending = true);
-
     try {
       final payload = {
         'deviceId': 'flutter-device-${DateTime.now().millisecondsSinceEpoch}',
@@ -299,8 +307,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         'action': 'create',
         'entity': 'site',
         'payload': {
-          'name': 'Cantiere Nord',
-          'client': 'Nord Retail',
+          'name': 'Nuovo cantiere',
+          'client': 'Cliente demo',
           'progress': 42,
           'owner': widget.email,
         },
@@ -317,7 +325,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         setState(() {
           _status = 'online';
-          _message = 'Evento inviato al master';
+          _message = 'Dati inviati al master';
         });
       } else {
         setState(() {
@@ -328,7 +336,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } catch (_) {
       setState(() {
         _status = 'offline';
-        _message = 'Connessione assente, evento in coda';
+        _message = 'Connessione offline: evento in coda';
       });
     } finally {
       setState(() => _sending = false);
@@ -338,12 +346,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final isMaster = widget.role == 'master';
-
-    final stats = [
-      {'label': 'Cantieri', 'value': '24', 'icon': Icons.construction_rounded, 'color': Colors.blue},
-      {'label': 'Fatture', 'value': '€184k', 'icon': Icons.attach_money_rounded, 'color': Colors.green},
-      {'label': 'Materiali', 'value': '128', 'icon': Icons.inventory_2_rounded, 'color': Colors.orange},
-      {'label': 'Sincronizzati', 'value': '98%', 'icon': Icons.sync_rounded, 'color': Colors.purple},
+    final pages = <Widget>[
+      _buildOverview(isMaster),
+      _buildSites(),
+      _buildMaterials(),
+      _buildSyncPanel(),
     ];
 
     return Scaffold(
@@ -357,173 +364,257 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Bentornato ${widget.email}', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Chip(
-                  label: Text(widget.role.toUpperCase()),
-                  avatar: Icon(widget.role == 'master' ? Icons.admin_panel_settings_rounded : Icons.devices_rounded, size: 16),
-                  backgroundColor: widget.role == 'master' ? Colors.blue.shade100 : Colors.green.shade100,
-                ),
-                const SizedBox(width: 12),
-                Chip(
-                  label: Text(_status.toUpperCase()),
-                  backgroundColor: _status == 'online' ? Colors.green.shade100 : Colors.orange.shade100,
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 4,
-              childAspectRatio: 1.8,
-              crossAxisSpacing: 14,
-              mainAxisSpacing: 14,
-              children: stats.map((item) {
-                final color = item['color'] as Color;
-                return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 22,
-                          backgroundColor: color.withOpacity(0.14),
-                          child: Icon(item['icon'] as IconData, color: color),
+      body: pages[_currentIndex],
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (index) => setState(() => _currentIndex = index),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
+          NavigationDestination(icon: Icon(Icons.construction_rounded), label: 'Cantieri'),
+          NavigationDestination(icon: Icon(Icons.inventory_2_rounded), label: 'Materiali'),
+          NavigationDestination(icon: Icon(Icons.sync_rounded), label: 'Sync'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOverview(bool isMaster) {
+    final stats = [
+      {'label': 'Cantieri', 'value': '24', 'icon': Icons.construction_rounded, 'color': Colors.blue},
+      {'label': 'Fatturato', 'value': '€184k', 'icon': Icons.attach_money_rounded, 'color': Colors.green},
+      {'label': 'Materiali', 'value': '128', 'icon': Icons.inventory_2_rounded, 'color': Colors.orange},
+      {'label': 'Sync', 'value': '98%', 'icon': Icons.sync_rounded, 'color': Colors.purple},
+    ];
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Bentornato ${widget.email}', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Chip(
+                label: Text(widget.role.toUpperCase()),
+                backgroundColor: isMaster ? Colors.blue.shade100 : Colors.green.shade100,
+              ),
+              const SizedBox(width: 12),
+              Chip(
+                label: Text(_status.toUpperCase()),
+                backgroundColor: _status == 'online' ? Colors.green.shade100 : Colors.orange.shade100,
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 14,
+            childAspectRatio: 2.3,
+            children: stats.map((item) {
+              final color = item['color'] as Color;
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: color.withOpacity(0.12),
+                        child: Icon(item['icon'] as IconData, color: color),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(item['label'] as String, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                            const SizedBox(height: 4),
+                            Text(item['value'] as String, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(item['label'] as String, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                              const SizedBox(height: 4),
-                              Text(item['value'] as String, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                );
-              }).toList(),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 20),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Permessi principali', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: (isMaster
+                        ? ['Leggi tutto', 'Scrivi tutto', 'Approva dati', 'Sincronizza globale']
+                        : ['Invia dati', 'Legge autorizzato', 'Upload documenti', 'Riceve assegnato'])
+                        .map((item) => Chip(label: Text(item)))
+                        .toList(),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 20),
-            Card(
+          ),
+          const SizedBox(height: 20),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Team di cantiere', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 12),
+                  ..._team.map((member) => ListTile(
+                        dense: true,
+                        leading: CircleAvatar(
+                          child: Text(member['name'].toString().split(' ').map((p) => p[0]).take(2).join()),
+                        ),
+                        title: Text(member['name'] as String),
+                        subtitle: Text(member['role'] as String),
+                        trailing: Chip(label: Text('Turno ${member['shift']}')),
+                      )),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSites() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Expanded(child: Text('Cantieri', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800))),
+              FilledButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Nuovo'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ..._sites.map((site) {
+            final progress = site['progress'] as int;
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
               child: Padding(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        const Text('Sincronizzazione', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-                        const Spacer(),
-                        FilledButton.icon(
-                          onPressed: _isCheckingSync ? null : _checkSync,
-                          icon: const Icon(Icons.signal_wifi_statusbar_connected_no_internet_4_rounded),
-                          label: Text(_isCheckingSync ? 'Controllo...' : 'Verifica'),
-                        ),
-                        const SizedBox(width: 12),
-                        FilledButton.icon(
-                          onPressed: _sending ? null : _sendSync,
-                          icon: const Icon(Icons.sync),
-                          label: Text(_sending ? 'Invio...' : 'Invia sync'),
-                        ),
+                        Expanded(child: Text(site['name'] as String, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18))),
+                        Chip(label: Text('$progress%')),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    Text(_message, style: const TextStyle(color: Colors.grey)),
-                    const SizedBox(height: 18),
-                    const Text('Permessi del ruolo', style: TextStyle(fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: (isMaster
-                          ? ['Leggi tutto', 'Scrivi tutto', 'Approva dati', 'Distribuisci aggiornamenti']
-                          : ['Invia dati', 'Ricevi autorizzato', 'Upload documenti', 'Non modifica master'])
-                          .map((item) => Chip(label: Text(item)))
-                          .toList(),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 14,
-              mainAxisSpacing: 14,
-              childAspectRatio: 2.4,
-              children: [
-                _buildMiniCard('Cantieri aperti', '12', Icons.construction_rounded, Colors.blue),
-                _buildMiniCard('Materiali critici', '04', Icons.warning_amber_rounded, Colors.orange),
-                _buildMiniCard('Documenti', '83', Icons.description_rounded, Colors.green),
-                _buildMiniCard('Slack sync', '1.2s', Icons.timelapse_rounded, Colors.purple),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Coda sincronizzazione', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                    Text('Cliente: ${site['client']}'),
+                    const SizedBox(height: 6),
+                    Text('Budget: ${site['budget']} €'),
                     const SizedBox(height: 12),
-                    ..._queue.map((item) => ListTile(
-                          dense: true,
-                          title: Text('${item['entity']} • ${item['action']}'),
-                          trailing: Chip(
-                            label: Text(item['status'] as String),
-                            backgroundColor: item['status'] == 'pending' ? Colors.orange.shade100 : Colors.green.shade100,
-                          ),
-                        )),
+                    LinearProgressIndicator(value: progress / 100, minHeight: 10),
                   ],
                 ),
               ),
-            ),
-          ],
-        ),
+            );
+          }),
+        ],
       ),
     );
   }
 
-  Widget _buildMiniCard(String title, String value, IconData icon, Color color) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: color.withOpacity(0.11),
-              child: Icon(icon, color: color),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
+  Widget _buildMaterials() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Materiali', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 16),
+          ..._materials.map((item) => Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: item['status'] == 'OK' ? Colors.green.shade100 : Colors.orange.shade100,
+                    child: Icon(item['status'] == 'OK' ? Icons.check_rounded : Icons.warning_amber_rounded),
+                  ),
+                  title: Text(item['name'] as String),
+                  subtitle: Text(item['qty'] as String),
+                  trailing: Chip(label: Text(item['status'] as String)),
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSyncPanel() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Sincronizzazione', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 14),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                  const SizedBox(height: 6),
-                  Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                  Text('Stato: $_status', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 8),
+                  Text(_message, style: const TextStyle(color: Colors.grey)),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      FilledButton.icon(
+                        onPressed: _checking ? null : _checkSync,
+                        icon: const Icon(Icons.signal_wifi_statusbar_connected_no_internet_4_rounded),
+                        label: Text(_checking ? 'Verifica...' : 'Verifica sync'),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton.icon(
+                        onPressed: _sending ? null : _sendSync,
+                        icon: const Icon(Icons.sync_rounded),
+                        label: Text(_sending ? 'Invio...' : 'Invia cambio'),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 20),
+          const Text('Coda di sincronizzazione', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 12),
+          ..._syncQueue.map((item) => Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: ListTile(
+                  title: Text('${item['entity']} • ${item['action']}'),
+                  trailing: Chip(
+                    label: Text(item['status'] as String),
+                    backgroundColor: item['status'] == 'pending' ? Colors.orange.shade100 : Colors.green.shade100,
+                  ),
+                ),
+              )),
+        ],
       ),
     );
   }

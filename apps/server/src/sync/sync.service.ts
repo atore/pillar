@@ -8,11 +8,24 @@ export interface SyncEvent {
   payload: Record<string, any>;
   timestamp: string;
   version: number;
+  status?: 'pending' | 'approved' | 'rejected';
 }
 
 @Injectable()
 export class SyncService {
-  private readonly queue: SyncEvent[] = [];
+  private readonly queue: SyncEvent[] = [
+    {
+      deviceId: 'demo-device-01',
+      role: 'slave',
+      action: 'create',
+      entity: 'site',
+      payload: { name: 'Cantiere Demo', progress: 55 },
+      timestamp: new Date().toISOString(),
+      version: 1,
+      status: 'pending',
+    },
+  ];
+
   private readonly devices = new Map<string, { role: 'master' | 'slave'; lastSeen: number }>();
 
   registerDevice(deviceId: string, role: 'master' | 'slave') {
@@ -20,8 +33,8 @@ export class SyncService {
   }
 
   pushEvent(event: SyncEvent) {
-    this.queue.push(event);
-    return event;
+    this.queue.push({ ...event, status: event.status ?? 'pending' });
+    return this.queue[this.queue.length - 1];
   }
 
   getQueue() {
