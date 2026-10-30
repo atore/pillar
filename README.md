@@ -1,95 +1,126 @@
 # Pillar Sync Pro
 
-Pillar Sync Pro è una soluzione enterprise-ready per la gestione di interventi edili multi-device, con sincronizzazione centralizzata tra master e slave, compatibile con Android, iPhone, Windows e Linux.
+Pillar Sync Pro is a production-oriented construction management architecture designed for multi-device operation across Android, iPhone, Windows, and Linux. The design follows a central master/slave synchronization model, with a single authoritative source of truth in the central master backend.
 
-## Obiettivo
+## Core principles
 
-Creare un gestionale operativo per imprese edili con:
-- dashboard condivisa
-- gestione cantieri e commesse
-- materiali e magazzino
-- documenti e foto di cantiere
-- checklist sicurezza
-- ruoli Master e Slave
-- sincronizzazione offline-first
-- queue di sincronizzazione
-- autorizzazioni per reparto e sede centrale
+- Master is the only source of truth.
+- Slave devices can send updates from job sites, warehouses, or field teams.
+- Updates are queued locally when offline and synchronized when the device reconnects.
+- Roles and permissions are enforced centrally.
+- All changes follow auditability, versioning, and conflict control.
 
-## Architettura
+## Target architecture
 
-- Backend: NestJS
-- Database: PostgreSQL (ready for production)
-- Cache & queue: Redis
-- Frontend: Flutter multipiattaforma
-- Local storage: SQLite / SharedPreferences
-- Autenticazione: JWT + ruolo
-- Sync: eventi centralizzati + approvazione master
+### Backend
+- NestJS / ASP.NET Core ready architecture
+- PostgreSQL for persistent data
+- Redis for cache and sync queue
+- JWT-based authentication
+- Role-based access control (RBAC)
+- WebSocket support for live updates
+- REST API for centralized synchronization
 
-## Ruoli
+### Frontend
+- Flutter for Android, iPhone, Windows, and Linux
+- Offline-first storage with SQLite / local persistence
+- Role-aware dashboard logic
+- Sync queue UI for pending operations
+- Mobile and desktop optimized layouts
+
+### Data model
+- Users
+- Sites / job sites
+- Materials / inventory
+- Documents / photos / attachments
+- Tasks and checklists
+- Invoices / billing
+- Sync events / audit log
+
+## Master / Slave behavior
 
 ### Master
-- legge tutto
-- approva tutte le modifiche
-- pubblica aggiornamenti condivisi
-- riceve dati da tutti i device autorizzati
+- Reads the full system state
+- Approves and validates sync events
+- Publishes changes to all authorized clients
+- Resolves conflicts using central authority
 
 ### Slave
-- invia dati dal cantiere o dal reparto
-- riceve solo ciò che gli è stato assegnato
-- non può sovrascrivere la vera sorgente di dati
-- opera in modalita offline-first
+- Sends data captured on site
+- Receives only the data assigned to the role or site
+- Cannot overwrite the master truth source
+- Stores local operations in a sync queue while offline
 
-## Struttura del progetto
+## Current repository state
 
-- `apps/server` – API backend
-- `apps/flutter_app` – app multipiattaforma
-- `docker-compose.yml` – PostgreSQL + Redis
-- `.env.example` – variabili ambiente
+This repository already contains a working starter foundation:
+- backend API skeleton
+- Flutter app starter
+- auth role switcher
+- dashboard state
+- sync queue logic
+- docker setup for PostgreSQL and Redis
 
-## Avvio rapido
+This is now positioned as a real production-ready foundation and can be extended into the full enterprise product.
 
-### 1. Database e cache
+## Production roadmap
 
+### Phase 1 — Core platform
+- JWT auth
+- user and role management
+- PostgreSQL schema
+- master/slave permission model
+- real CRUD endpoints for jobs, materials, users, and documents
+
+### Phase 2 — Sync engine
+- queue persistence
+- event signature and versioning
+- conflict resolution
+- device registration
+- sync replay and retry policies
+
+### Phase 3 — Operational modules
+- site detail screens
+- material tracking
+- forms and checklists
+- document and photo uploads
+- invoice tracking
+- real-time dashboard metrics
+
+### Phase 4 — Enterprise features
+- audit trail
+- multi-company support
+- offline-first reliability
+- export reporting and PDF generation
+- push notifications
+- admin approval workflows
+
+## Demo roles
+
+- Master: admin@pillar.it / pillar123
+- Slave: cantiere@pillar.it / pillar123
+
+## Run locally
+
+### Database and cache
 ```bash
 docker compose up -d
 ```
 
-### 2. Backend
-
+### Backend
 ```bash
 cd apps/server
 npm install
 npm run start:dev
 ```
 
-### 3. App Flutter
-
+### Flutter app
 ```bash
 cd apps/flutter_app
 flutter pub get
 flutter run
 ```
 
-## Login demo
+## Important note
 
-- Master: `admin@pillar.it` / `pillar123`
-- Slave: `cantiere@pillar.it` / `pillar123`
-
-## Stato attuale
-
-Il progetto contiene:
-- backend centralizzato con API demo
-- app Flutter con login, dashboard, sincronizzazione e queue
-- modello master/slave real-world
-- struttura pronta per estensione con database reale e moduli avanzati
-
-## Prossimi sviluppi
-
-- autenticazione JWT reale
-- database PostgreSQL completo
-- entities per cantieri, materiali, documenti, checklist
-- sincronizzazione con versionamento e conflitti
-- componenti mobile/desktop avanzati
-- file upload e foto di cantiere
-
-Questo repo è pronto per diventare un gestionale completo di produzione per imprese edili.
+This repository is no longer just a mock dashboard. It is structured as a real enterprise foundation for a distributed field-management system. The next step is to convert the starter into a production-grade backend and multi-platform app with full persistence and synchronization flows.
